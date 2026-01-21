@@ -34,3 +34,16 @@ def save_file(file_obj, full_path: str) -> bool:
     except Exception as e:
         print(f"Error guardando archivo en {full_path}: {e}")
         return False
+
+def check_password_hash(pwd_plana: str, pwd_hash: str) -> bool:
+    """
+    Valida si dos contraseñas con válidas.
+    """
+    from bcrypt import checkpw
+
+    pwd1_bytes = pwd_plana.encode('utf-8')
+    pwd2_bytes = pwd_hash.encode('utf-8')
+
+    validate = checkpw(pwd1_bytes, pwd2_bytes)
+
+    return validate

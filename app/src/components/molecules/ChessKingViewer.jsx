@@ -7,7 +7,11 @@ import { MathUtils } from 'three';
 function Scene() {
   const ref = useRef();
   
+  // Referencia para el valor normalizado (-1 a 1) que usa el useFrame
   const mousePosition = useRef(0);
+  
+  // NUEVO: Referencia para guardar la última posición en píxeles crudos (X)
+  const lastPixelX = useRef(0);
 
   useEffect(() => {
     const handleMove = (event) => {
@@ -19,9 +23,19 @@ function Scene() {
         clientX = event.clientX;
       }
 
-      const normalizedX = (clientX / window.innerWidth) * 2 - 1;
-      
-      mousePosition.current = normalizedX;
+      // --- LÓGICA DE OPTIMIZACIÓN (Umbral de 4px) ---
+      // Calculamos la distancia entre donde está el mouse ahora y donde estaba la última vez
+      const diff = Math.abs(clientX - lastPixelX.current);
+
+      // Solo actualizamos si se movió 4 píxeles o más
+      if (diff >= 30) {
+        // 1. Actualizamos la referencia del pixel para la próxima comparación
+        lastPixelX.current = clientX;
+
+        // 2. Ejecutamos la matemática de normalización (ahorro de CPU)
+        const normalizedX = (clientX / window.innerWidth) * 2 - 1;
+        mousePosition.current = normalizedX;
+      }
     };
 
     window.addEventListener('mousemove', handleMove);
@@ -40,6 +54,8 @@ function Scene() {
 
     const targetRotationY = mousePosition.current * maxRotation;
     
+    // El Lerp se encargará de suavizar esos "saltos" de 4 píxeles
+    // para que visualmente no se vea trabado.
     ref.current.rotation.y = MathUtils.lerp(
       ref.current.rotation.y, 
       targetRotationY, 

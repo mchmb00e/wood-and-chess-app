@@ -7,6 +7,7 @@ function BackgroundContainer({
     children, 
     className = "",
     style = {},
+    childrenClassName = "",
     ...rest
 }) {
     return (
@@ -51,6 +52,7 @@ function BackgroundContainer({
                     width: '100%',
                     height: '100%' 
                 }}
+                className={childrenClassName}
             >
                 {children}
             </div>

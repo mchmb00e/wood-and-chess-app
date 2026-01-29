@@ -4,10 +4,9 @@ import Card from "@/components/molecules/Card";
 import Title from "@/components/atoms/Title";
 import ChessKingViewer from "@/components/molecules/ChessKingViewer";
 
-export default function Header({pageTitle}) {
+export default function Header({pageTitle, isLogged}) {
 
     const posCard = 450;
-
     return (
         <header>
             <div className="bg-dark">
@@ -17,7 +16,7 @@ export default function Header({pageTitle}) {
                     className="pb-5"
                     style={{ paddingBottom: '8rem' }}
                 >
-                    <Nav pageTitle={pageTitle} />
+                    <Nav pageTitle={pageTitle} isLogged={isLogged} />
 
                     <div className="mt-5 container" style={{marginBottom: `${posCard / 2}px`}}>
                         <Title color="white" align="center">Herencia de mi Abuelo</Title>

@@ -3,6 +3,9 @@ from sessions.database import connection
 from modules.registrar_cliente import registrar_cliente
 from scripts.utils import check_password_hash
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
+from modules.autenticar_usuario import autenticar_usuario
+from modules.modificar_contrasena import modificar_contrasena
+from modules.obtener_sesion import obtener_sesion
 
 usuario_bp = Blueprint('usuario_bp', __name__, url_prefix='/api/usuario')
 
@@ -55,48 +58,36 @@ def api_registrar_cliente():
 def api_autenticar_usuario():
     email = request.form.get('email')
     contrasena = request.form.get('contrasena')
+    
+    token = autenticar_usuario(email, contrasena)
+    
+    if token:
+        return jsonify({'token': token}), 200
+    else:
+        return jsonify({'token': ""}), 400
 
-    cursor = connection.cursor()
-    try:
-        cursor.execute(
-            "SELECT USU_RUT, USU_CONTRA FROM USUARIO WHERE USU_EMAIL = %s",
-            (email,)
-        )
-        usuario = cursor.fetchone()
-
-        if not usuario:
-            return jsonify({'token': ""}), 401
-
-        rut_usuario = str(usuario["USU_RUT"])
-        hash_db = usuario["USU_CONTRA"]
-
-        es_valida = check_password_hash(pwd_plana = contrasena, pwd_hash = hash_db)
-
-        if es_valida:
-            token = create_access_token(identity=rut_usuario)
-            return jsonify({'token': token}), 200
-        else:
-            return jsonify({'token': ""}), 401
-
-    except Exception as e:
-        return jsonify({'error': 'Error interno servidor', 'detalles': f"{e}"}), 500
-    finally:
-        cursor.close() # Siempre cerrar el cursor
-
-@usuario_bp.route("/mis_datos", methods=['GET'])
+@usuario_bp.route('/obtener_sesion', methods=['GET'])
 @jwt_required()
-def perfil():
-    rut = get_jwt_identity()
-    cursor = connection.cursor()
-    cursor.execute(
-        """
-        SELECT USU_RUT, USU_NOMBRE, USU_APELLIDO, USU_EMAIL, USU_TELEF
-        FROM USUARIO
-        WHERE USU_RUT = %s
-        """,
-        (int(rut),)
-    )
+def api_obtener_sesion():
+    usuario_rut = get_jwt_identity()
+    
+    datos = obtener_sesion(usuario_rut)
+    
+    if datos:
+        return jsonify(datos), 200
+    else:
+        return jsonify({'error': 'Usuario no encontrado'}), 400
 
-    usuario = cursor.fetchone()
-
-    return jsonify(usuario)
+@usuario_bp.route('/modificar_contrasena', methods=['PUT'])
+@jwt_required()
+def api_modificar_contrasena():
+    usuario_rut = get_jwt_identity()
+    contrasena_actual = request.form.get('contrasena_actual')
+    contrasena_nueva = request.form.get('contrasena_nueva')
+    
+    exito = modificar_contrasena(usuario_rut, contrasena_actual, contrasena_nueva)
+    
+    if exito:
+        return jsonify({'mensaje': 'Contraseña modificada correctamente'}), 200
+    else:
+        return jsonify({'mensaje': 'Error al modificar contraseña'}), 400

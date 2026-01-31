@@ -1,12 +1,15 @@
 # Base de datos.
-DB_HOST=
+DB_HOST=localhost
 DB_USER=
 DB_PASSWORD=
-DB_NAME=
+DB_NAME=INGSWI_WOODCHESS
 
 # Flask
 FLASK_APP=run.py
 FLASK_ENV=development
 
 # Datastorage
-BASE_ARCHIVO = 
+BASE_ARCHIVO=static/uploads/
+
+# Token
+TOKEN_EXPIRES_IN=24

@@ -1,4 +1,6 @@
 import os
+import hmac
+import hashlib
 
 def generate_password_hash(password: str) -> str:
     """
@@ -47,3 +49,36 @@ def check_password_hash(pwd_plana: str, pwd_hash: str) -> bool:
     validate = checkpw(pwd1_bytes, pwd2_bytes)
 
     return validate
+
+def parse_cart(cart: list):
+    products = []
+    for product in cart:
+        products.append({
+            'id': product["id"],
+            'mat1': product["materiales"][0],
+            'mat2': product["materiales"][1],
+            'mat3': product["materiales"][2],
+            'mat4': product["materiales"][3]
+        })
+
+    return products
+
+def generate_signature_payment(params: dict, secret_key: str) -> str:
+    """
+    Genera la firma HMAC-SHA256 requerida por Flow.
+    Concatena clave+valor de los parámetros ordenados alfabéticamente.
+    """
+    # 1. Ordenar las llaves alfabéticamente
+    keys_ordenadas = sorted(params.keys())
+    
+    # 2. Concatenar clave+valor
+    mensaje_a_firmar = "".join([f"{key}{params[key]}" for key in keys_ordenadas])
+    
+    # 3. Generar HMAC-SHA256
+    signature = hmac.new(
+        key=secret_key.encode('utf-8'),
+        msg=mensaje_a_firmar.encode('utf-8'),
+        digestmod=hashlib.sha256
+    ).hexdigest()
+    
+    return signature

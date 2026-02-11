@@ -1,6 +1,7 @@
 from flask import send_file, jsonify
 import os
 from werkzeug.utils import secure_filename
+from sessions.env import getenv  # Usamos tu wrapper para asegurar que lea el .env
 
 def obtener_archivo(ruta_relativa):
     """
@@ -12,26 +13,31 @@ def obtener_archivo(ruta_relativa):
                 'error': 'El parámetro "ruta" es requerido'
             }), 400
         
-        # Obtener la ruta base y convertir a absoluta
-        base_archivo = os.getenv('BASE_ARCHIVO', 'static/files/')
+        # Usamos tu función getenv para mantener consistencia
+        base_archivo = getenv('BASE_ARCHIVO')
+        
+        # Fallback por si no está en el .env (opcional, pero buena práctica)
+        if not base_archivo:
+            base_archivo = 'static/files/'
+
         base_absoluta = os.path.abspath(base_archivo)
         
         # Construir ruta completa
         ruta_completa = os.path.abspath(os.path.join(base_absoluta, ruta_relativa))
         
-        # Verificar que la ruta está dentro de la carpeta base (previene path traversal)
+        # SECURITY CHECK: Previene Path Traversal (evita que pidan ../../../etc/passwd)
         if not ruta_completa.startswith(base_absoluta):
             return jsonify({
-                'error': 'Ruta inválida'
+                'error': 'Ruta inválida (Intento de Path Traversal)'
             }), 400
         
         # Verificar que el archivo existe
         if not os.path.exists(ruta_completa):
             return jsonify({
-                'error': f'El archivo no existe: {ruta_relativa}'
-            }), 400
+                'error': f'El archivo no existe'
+            }), 404 # 404 es más semántico para "No encontrado"
         
-        # Verificar que es un archivo
+        # Verificar que es un archivo y no una carpeta
         if not os.path.isfile(ruta_completa):
             return jsonify({
                 'error': 'La ruta especificada no es un archivo válido'
@@ -41,6 +47,7 @@ def obtener_archivo(ruta_relativa):
         return send_file(ruta_completa), 200
         
     except Exception as e:
+        print(f"Error sirviendo archivo: {e}")
         return jsonify({
-            'error': f'Error al obtener el archivo: {str(e)}'
-        }), 400
+            'error': 'Error interno del servidor al obtener el archivo'
+        }), 500

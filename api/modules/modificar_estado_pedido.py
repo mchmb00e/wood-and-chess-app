@@ -1,12 +1,19 @@
-from sessions.database import connection
+from sessions.database import get_db_connection
 from datetime import datetime
 
 def modificar_estado_pedido(pedido_id: int, estado: str) -> bool:
     """
-    Modifica el estado de un pedido.
+    Modifica el estado de un pedido y actualiza la fecha de última modificación.
     """
-    cursor = connection.cursor()
+    conn = None
+    cursor = None
+    
     try:
+        # 1. Conexión fresca
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 2. Actualizamos estado y fecha
         cursor.execute(
             """
             UPDATE PEDIDO
@@ -15,9 +22,21 @@ def modificar_estado_pedido(pedido_id: int, estado: str) -> bool:
             """,
             (estado, datetime.now(), pedido_id)
         )
-        connection.commit()
+        
+        # 3. Confirmamos el cambio
+        conn.commit()
         return True
+
     except Exception as e:
+        print(f"Error modificando estado pedido: {e}")
+        # 4. Rollback por si las moscas
+        if conn:
+            conn.rollback()
         return False
+        
     finally:
-        cursor.close()
+        # 5. Cerramos todo
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()

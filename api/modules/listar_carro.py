@@ -1,15 +1,30 @@
-from sessions.database import connection
+from sessions.database import get_db_connection
 
 def listar_carro(usuario_rut: int) -> list:
     """
     Lista los productos en el carro del usuario.
     """
-    cursor = connection.cursor()
+    conn = None
+    cursor = None
+    
     try:
+        # 1. Conexión fresca para lectura rápida
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
         cursor.execute(
             """
-            SELECT C.CAR_ID, P.PROD_NOMBRE, P.PROD_DESC, P.PROD_PRECIO,
-                   I.IMA_RUTA, C.CAR_MAT1, C.CAR_MAT2, C.CAR_MAT3, C.CAR_MAT4
+            SELECT 
+                C.CAR_ID, 
+                C.CAR_PRODID, 
+                P.PROD_NOMBRE, 
+                P.PROD_DESC, 
+                P.PROD_PRECIO,
+                I.IMA_RUTA, 
+                C.CAR_MAT1, 
+                C.CAR_MAT2, 
+                C.CAR_MAT3, 
+                C.CAR_MAT4
             FROM CARRO C
             INNER JOIN PRODUCTO P ON C.CAR_PRODID = P.PROD_ID
             LEFT JOIN IMAGEN I ON P.PROD_ID = I.IMA_PRODID AND I.IMA_PRINCIPAL = 1
@@ -22,8 +37,11 @@ def listar_carro(usuario_rut: int) -> list:
         resultado = []
         for fila in filas:
             personalizado = fila["CAR_MAT1"] is not None
+            
+            # Construimos el objeto tal cual lo necesita el frontend
             resultado.append({
-                "id": fila["CAR_ID"],
+                "id": fila["CAR_PRODID"], 
+                "cart_id": fila["CAR_ID"], 
                 "nombre": fila["PROD_NOMBRE"],
                 "descripcion": fila["PROD_DESC"],
                 "precio": fila["PROD_PRECIO"],
@@ -37,7 +55,14 @@ def listar_carro(usuario_rut: int) -> list:
                 ]
             })
         return resultado
+
     except Exception as e:
+        print(f"Error al listar carro: {e}")
         return []
+        
     finally:
-        cursor.close()
+        # 2. Cerramos todo
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()

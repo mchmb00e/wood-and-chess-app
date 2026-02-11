@@ -1,4 +1,4 @@
-from sessions.database import connection
+from sessions.database import get_db_connection
 
 def listar_pedidos(usuario_rut: int, rol: str, buscar_id: int = None) -> list:
     """
@@ -6,8 +6,14 @@ def listar_pedidos(usuario_rut: int, rol: str, buscar_id: int = None) -> list:
     Si es admin: todos los pedidos.
     Si es usuario: solo los suyos.
     """
-    cursor = connection.cursor()
+    conn = None
+    cursor = None
+    
     try:
+        # 1. Abrimos conexión nueva
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
         if rol == "ADM":
             if buscar_id:
                 cursor.execute(
@@ -26,6 +32,7 @@ def listar_pedidos(usuario_rut: int, rol: str, buscar_id: int = None) -> list:
                     """
                 )
         else:
+            # Si es usuario normal, blindamos la consulta con su RUT
             if buscar_id:
                 cursor.execute(
                     """
@@ -57,7 +64,14 @@ def listar_pedidos(usuario_rut: int, rol: str, buscar_id: int = None) -> list:
                 "fecha_creado": str(fila["PED_FCREADO"])
             })
         return resultado
+
     except Exception as e:
+        print(f"Error al listar pedidos: {e}")
         return []
+        
     finally:
-        cursor.close()
+        # 2. Cerramos el boliche
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()

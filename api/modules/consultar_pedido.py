@@ -1,12 +1,18 @@
-from sessions.database import connection
+from sessions.database import get_db_connection
 
 def consultar_pedido(pedido_id: int, usuario_rut: int, rol: str) -> dict:
     """
     Consulta los detalles de un pedido.
     """
-    cursor = connection.cursor()
+    conn = None
+    cursor = None
     try:
-        # Verificar acceso: admin ve todo, usuario solo los suyos
+        # 1. Iniciamos la conexión fresca
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # 2. Verificar acceso: el Admin es el "Easykid" del sistema y ve todo, 
+        # el usuario solo lo suyo por seguridad.
         if rol == "ADM":
             cursor.execute(
                 """
@@ -33,6 +39,7 @@ def consultar_pedido(pedido_id: int, usuario_rut: int, rol: str) -> dict:
         if not pedido:
             return None
         
+        # 3. Consultamos los productos asociados a ese pedido
         cursor.execute(
             """
             SELECT PP.*, PR.PROD_NOMBRE
@@ -50,7 +57,7 @@ def consultar_pedido(pedido_id: int, usuario_rut: int, rol: str) -> dict:
             productos.append({
                 "id": prod["PEPR_PRODID"],
                 "nombre": prod["PROD_NOMBRE"],
-                "cantidad": 1,
+                "cantidad": 1, # Asumido 1 según la estructura actual de tu tabla intermedia
                 "personalizado": personalizado,
                 "materiales": [
                     prod["PEPR_MATPRI"],
@@ -62,6 +69,7 @@ def consultar_pedido(pedido_id: int, usuario_rut: int, rol: str) -> dict:
         
         retiro_en_tienda = pedido["PED_CALLE"] is None
         
+        # 4. Armamos el objeto de respuesta final
         resultado = {
             "id": pedido["PED_ID"],
             "cliente": {
@@ -80,11 +88,19 @@ def consultar_pedido(pedido_id: int, usuario_rut: int, rol: str) -> dict:
                 "calle": pedido["PED_CALLE"],
                 "numero": pedido["PED_NUMERO"],
                 "comuna": pedido["PED_COMUNA"],
+                "region": pedido["PED_REGION"],
                 "indicaciones": pedido["PED_INDEXTRA"]
             }
         
         return resultado
+
     except Exception as e:
+        print(f"Error consultando pedido: {e}")
         return None
+        
     finally:
-        cursor.close()
+        # 5. Cerramos cursor y conexión para que el server no transpire de más
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()

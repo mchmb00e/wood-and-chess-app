@@ -1,12 +1,18 @@
-from sessions.database import connection
+from sessions.database import get_db_connection
 
 def obtener_sesion(usuario_rut: int) -> dict:
     """
     Obtiene los datos del usuario en sesión.
     Retorna un diccionario con los datos o None si falla.
     """
-    cursor = connection.cursor()
+    conn = None
+    cursor = None
+    
     try:
+        # 1. Abrimos conexión fresca y dedicada
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
         cursor.execute(
             """
             SELECT USU_RUT, USU_NOMBRE, USU_APELLIDO, USU_EMAIL, USU_ROL, USU_TELEF
@@ -28,7 +34,14 @@ def obtener_sesion(usuario_rut: int) -> dict:
             "rol": usuario["USU_ROL"],
             "telefono": usuario["USU_TELEF"]
         }
+
     except Exception as e:
+        print(f"Error obteniendo sesión: {e}")
         return None
+        
     finally:
-        cursor.close()
+        # 2. Cerramos todo para no saturar el pool de conexiones
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()

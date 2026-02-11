@@ -1,47 +1,54 @@
-from sessions.database import connection
+from sessions.database import get_db_connection
 
-def eliminar_producto_carro(car_id: int, usuario_rut: int) -> int:
+def eliminar_producto_carro(prod_id: int, usuario_rut: int) -> int:
     """
-    Elimina un producto del carro.
-    Retorna la cantidad de registros restantes del mismo producto, o -1 si falla.
+    Elimina UNA sola instancia de un producto específico para un usuario.
+    Retorna la cantidad restante de ese producto o -1 si hay error.
     """
-    cursor = connection.cursor()
+    conn = None
+    cursor = None
+    
     try:
-        cursor.execute(
-            """
-            SELECT CAR_PRODID
-            FROM CARRO
-            WHERE CAR_ID = %s AND CAR_USURUT = %s
-            """,
-            (car_id, usuario_rut)
-        )
-        registro = cursor.fetchone()
+        # 1. Abrimos conexión nueva
+        conn = get_db_connection()
+        cursor = conn.cursor()
         
-        if not registro:
+        # 2. Eliminamos solo UNA instancia (LIMIT 1)
+        query_delete = """
+            DELETE FROM CARRO 
+            WHERE CAR_PRODID = %s AND CAR_USURUT = %s 
+            LIMIT 1
+        """
+        cursor.execute(query_delete, (prod_id, usuario_rut))
+        
+        # Si no borró nada (rowcount == 0), es que el producto no estaba
+        if cursor.rowcount == 0:
             return -1
+            
+        # 3. Confirmamos la eliminación (Commit)
+        conn.commit()
         
-        prod_id = registro["CAR_PRODID"]
-        
-        cursor.execute(
-            """
-            DELETE FROM CARRO
-            WHERE CAR_ID = %s AND CAR_USURUT = %s
-            """,
-            (car_id, usuario_rut)
-        )
-        connection.commit()
-        
-        cursor.execute(
-            """
-            SELECT COUNT(*) as cantidad
-            FROM CARRO
-            WHERE CAR_USURUT = %s AND CAR_PRODID = %s
-            """,
-            (usuario_rut, prod_id)
-        )
+        # 4. Contamos cuántos quedan para actualizar la UI del usuario
+        query_count = """
+            SELECT COUNT(*) as cantidad 
+            FROM CARRO 
+            WHERE CAR_PRODID = %s AND CAR_USURUT = %s
+        """
+        cursor.execute(query_count, (prod_id, usuario_rut))
         resultado = cursor.fetchone()
+        
         return resultado["cantidad"]
+
     except Exception as e:
+        print(f"Error al eliminar: {e}")
+        # 5. Rollback por si las moscas
+        if conn:
+            conn.rollback() 
         return -1
+        
     finally:
-        cursor.close()
+        # 6. Limpieza final
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()

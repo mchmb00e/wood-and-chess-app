@@ -24,3 +24,7 @@ jwt = JWTManager(app)
 @app.route('/', methods=['GET'])
 def home():
     return "¡La API está funcionando!"
+
+@app.route('/vixo', methods=['GET'])
+def vixo():
+    return "Hola vixo"

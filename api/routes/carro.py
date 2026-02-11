@@ -3,8 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from modules.listar_carro import listar_carro
 from modules.agregar_producto_carro import agregar_producto_carro
 from modules.eliminar_producto_carro import eliminar_producto_carro
-from modules.vaciar_carro import vaciar_carro
-from modules.puede_comentar import puede_comentar
+
 
 carro_bp = Blueprint('carro_bp', __name__, url_prefix='/api/carro')
 
@@ -47,7 +46,7 @@ def api_eliminar_producto_carro(id):
     usuario_rut = get_jwt_identity()
     
     cantidad = eliminar_producto_carro(
-        car_id=int(id),
+        prod_id=int(id),
         usuario_rut=int(usuario_rut)
     )
     
@@ -55,27 +54,3 @@ def api_eliminar_producto_carro(id):
         return jsonify({'cantidad': cantidad}), 200
     else:
         return jsonify({'mensaje': 'Error al eliminar producto'}), 400
-    
-@carro_bp.route('/vaciar', methods=['DELETE'])
-@jwt_required()
-def api_vaciar_carro():
-    usuario_rut = get_jwt_identity()
-    
-    exito = vaciar_carro(int(usuario_rut))
-    
-    if exito:
-        return jsonify({'mensaje': 'Carro vaciado correctamente'}), 200
-    else:
-        return jsonify({'mensaje': 'Error al vaciar carro'}), 400
-    
-@carro_bp.route('/puede_comentar/<id_producto>', methods=['GET'])
-@jwt_required()
-def api_puede_comentar(id_producto):
-    usuario_rut = get_jwt_identity()
-    
-    habilitado = puede_comentar(
-        usuario_rut=int(usuario_rut),
-        producto_id=int(id_producto)
-    )
-    
-    return jsonify({'habilitado': habilitado}), 200
